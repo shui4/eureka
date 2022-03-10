@@ -7,6 +7,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyStore;
+import java.util.concurrent.TimeUnit;
 
 import com.netflix.discovery.converters.wrappers.CodecWrappers;
 import com.netflix.discovery.converters.wrappers.DecoderWrapper;
@@ -182,7 +183,8 @@ public class EurekaJerseyClientImpl implements EurekaJerseyClient {
         public EurekaJerseyClient build() {
             MyDefaultApacheHttpClient4Config config = new MyDefaultApacheHttpClient4Config();
             try {
-                return new EurekaJerseyClientImpl(connectionTimeout, readTimeout, connectionIdleTimeout, config);
+                // todo DEBUG修改时间
+                return new EurekaJerseyClientImpl(connectionTimeout, (int)TimeUnit.HOURS.toMillis(1), connectionIdleTimeout, config);
             } catch (Throwable e) {
                 throw new RuntimeException("Cannot create Jersey client ", e);
             }
