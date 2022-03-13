@@ -17,11 +17,12 @@ public class DownOrStartingRule implements InstanceStatusOverrideRule {
     public StatusOverrideResult apply(InstanceInfo instanceInfo,
                                       Lease<InstanceInfo> existingLease,
                                       boolean isReplication) {
-        // ReplicationInstance is DOWN or STARTING - believe that, but when the instance says UP, question that
-        // The client instance sends STARTING or DOWN (because of heartbeat failures), then we accept what
-        // the client says. The same is the case with replica as well.
-        // The OUT_OF_SERVICE from the client or replica needs to be confirmed as well since the service may be
-        // currently in SERVICE
+        // ReplicationInstance 是 DOWN 或 STARTING - 相信这一点，但是当实例说 UP 时，质疑
+        // 客户端实例发送 STARTING 或 DOWN（因为心跳失败），然后我们接受什么
+        // 客户说。复制品也是如此。
+        // 来自客户端或副本的 OUT_OF_SERVICE 也需要确认，因为服务可能是
+        // 目前在 SERVICE
+        // 因为 DOWN 和 STARTING 是程序能够确认的，而UP和OUT_OF_SERVICE是可以人工改的
         if ((!InstanceInfo.InstanceStatus.UP.equals(instanceInfo.getStatus()))
                 && (!InstanceInfo.InstanceStatus.OUT_OF_SERVICE.equals(instanceInfo.getStatus()))) {
             logger.debug("Trusting the instance status {} from replica or instance for instance {}",

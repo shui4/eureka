@@ -113,6 +113,7 @@ public class ApplicationsResource {
      * @return a response containing information about all {@link com.netflix.discovery.shared.Applications}
      *         from the {@link AbstractInstanceRegistry}.
      */
+    // 全量下载
     @GET
     public Response getContainers(@PathParam("version") String version,
                                   @HeaderParam(HEADER_ACCEPT) String acceptHeader,
@@ -131,9 +132,9 @@ public class ApplicationsResource {
             EurekaMonitors.GET_ALL_WITH_REMOTE_REGIONS.increment();
         }
 
-        // Check if the server allows the access to the registry. The server can
-        // restrict access if it is not
-        // ready to serve traffic depending on various reasons.
+        // 检查服务器是否允许访问注册表。服务器可以
+        // 如果不是，则限制访问
+        // 准备根据各种原因为流量提供服务。
         if (!registry.shouldAllowAccess(isRemoteRegionRequested)) {
             return Response.status(Status.FORBIDDEN).build();
         }
@@ -146,13 +147,16 @@ public class ApplicationsResource {
         }
 
         Key cacheKey = new Key(Key.EntityType.Application,
+                // 表示全量下载
                 ResponseCacheImpl.ALL_APPS,
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
         );
 
         Response response;
         if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
-            response = Response.ok(responseCache.getGZIP(cacheKey))
+            response = Response.ok(
+                // 获取一个压缩过的结果
+                responseCache.getGZIP(cacheKey))
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)
                     .build();
@@ -194,6 +198,7 @@ public class ApplicationsResource {
      */
     @Path("delta")
     @GET
+    // 增量下载
     public Response getContainerDifferential(
             @PathParam("version") String version,
             @HeaderParam(HEADER_ACCEPT) String acceptHeader,
@@ -203,8 +208,8 @@ public class ApplicationsResource {
 
         boolean isRemoteRegionRequested = null != regionsStr && !regionsStr.isEmpty();
 
-        // If the delta flag is disabled in discovery or if the lease expiration
-        // has been disabled, redirect clients to get all instances
+        // 如果 delta 标志在发现中被禁用或者如果租约到期
+        // 已禁用，重定向客户端以获取所有实例
         if ((serverConfig.shouldDisableDelta()) || (!registry.shouldAllowAccess(isRemoteRegionRequested))) {
             return Response.status(Status.FORBIDDEN).build();
         }

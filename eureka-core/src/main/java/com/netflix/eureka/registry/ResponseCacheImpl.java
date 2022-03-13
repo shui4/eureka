@@ -152,6 +152,7 @@ public class ResponseCacheImpl implements ResponseCache {
                             }
                         });
 
+        // 启动定时器，用于更新readOnlyCacheMap
         if (shouldUseReadOnlyResponseCache) {
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
@@ -178,8 +179,12 @@ public class ResponseCacheImpl implements ResponseCache {
                     }
                     try {
                         CurrentRequestVersion.set(key.getVersion());
+                        // 从读写缓存中获取当前key的value
                         Value cacheValue = readWriteCacheMap.get(key);
+                        // 从只读缓存中获取当前key的value
                         Value currentCacheValue = readOnlyCacheMap.get(key);
+                        // 如果2个value不同
+                        // 则将读写缓存的value放到只读缓存的value
                         if (cacheValue != currentCacheValue) {
                             readOnlyCacheMap.put(key, cacheValue);
                         }
@@ -229,7 +234,10 @@ public class ResponseCacheImpl implements ResponseCache {
      *         applications.
      */
     public byte[] getGZIP(Key key) {
-        Value payload = getValue(key, shouldUseReadOnlyResponseCache);
+        
+        Value payload = getValue(key,
+            // 配置文件中设置，默认 true
+            shouldUseReadOnlyResponseCache);
         if (payload == null) {
             return null;
         }
@@ -352,12 +360,16 @@ public class ResponseCacheImpl implements ResponseCache {
     Value getValue(final Key key, boolean useReadOnlyCache) {
         Value payload = null;
         try {
+            // 使用只读缓存？
             if (useReadOnlyCache) {
+                // 从只读缓存map中获取
                 final Value currentPayload = readOnlyCacheMap.get(key);
                 if (currentPayload != null) {
                     payload = currentPayload;
                 } else {
+                    // 从读写缓存map中获取
                     payload = readWriteCacheMap.get(key);
+                    // 将该值再放入到只读缓存map中
                     readOnlyCacheMap.put(key, payload);
                 }
             } else {
@@ -405,7 +417,7 @@ public class ResponseCacheImpl implements ResponseCache {
     }
 
     /*
-     * Generate pay load for the given key.
+     * 为给定密钥生成有效负载。
      */
     private Value generatePayload(Key key) {
         Stopwatch tracer = null;
@@ -414,7 +426,7 @@ public class ResponseCacheImpl implements ResponseCache {
             switch (key.getEntityType()) {
                 case Application:
                     boolean isRemoteRegionRequested = key.hasRegions();
-
+                    // 全量下载
                     if (ALL_APPS.equals(key.getName())) {
                         if (isRemoteRegionRequested) {
                             tracer = serializeAllAppsWithRemoteRegionTimer.start();
@@ -423,6 +435,7 @@ public class ResponseCacheImpl implements ResponseCache {
                             tracer = serializeAllAppsTimer.start();
                             payload = getPayLoad(key, registry.getApplications());
                         }
+                    // 增量下载
                     } else if (ALL_APPS_DELTA.equals(key.getName())) {
                         if (isRemoteRegionRequested) {
                             tracer = serializeDeltaAppsWithRemoteRegionTimer.start();

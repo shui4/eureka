@@ -18,15 +18,14 @@ public class LeaseExistsRule implements InstanceStatusOverrideRule {
     public StatusOverrideResult apply(InstanceInfo instanceInfo,
                                       Lease<InstanceInfo> existingLease,
                                       boolean isReplication) {
-        // This is for backward compatibility until all applications have ASG
-        // names, otherwise while starting up
-        // the client status may override status replicated from other servers
+        // 这是为了向后兼容，直到所有应用程序都具有 ASG
+        // 名称，否则在启动时客户端状态可能会覆盖从其他服务器复制的状态
         if (!isReplication) {
             InstanceInfo.InstanceStatus existingStatus = null;
             if (existingLease != null) {
                 existingStatus = existingLease.getHolder().getStatus();
             }
-            // Allow server to have its way when the status is UP or OUT_OF_SERVICE
+            // 当状态为 UP 或 OUT_OF_SERVICE 时允许服务器自行处理
             if ((existingStatus != null)
                     && (InstanceInfo.InstanceStatus.OUT_OF_SERVICE.equals(existingStatus)
                     || InstanceInfo.InstanceStatus.UP.equals(existingStatus))) {

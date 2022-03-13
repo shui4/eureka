@@ -147,6 +147,9 @@ public class InstanceInfo {
     private volatile Map<String, String> metadata;
     @Auto
     private volatile Long lastUpdatedTimestamp;
+    /**
+     * 配置文件发生变更，修改时间戳
+     */
     @Auto
     private volatile Long lastDirtyTimestamp;
     @Auto
