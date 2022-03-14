@@ -624,7 +624,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         }
       }
       Lease<InstanceInfo> existingLease = gMap.get(registrant.getId());
-      // 如果已经有租约，则保留最后一个脏时间戳而不覆盖它
+      // 如果已经有续约，则保留最后一个脏时间戳而不覆盖它
       if (existingLease != null && (existingLease.getHolder() != null)) {
         Long existingLastDirtyTimestamp = existingLease.getHolder().getLastDirtyTimestamp();
         Long registrationLastDirtyTimestamp = registrant.getLastDirtyTimestamp();
@@ -638,6 +638,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         // InstanceInfo instead of the server local copy.
 
         // 这里预防脏写，假设客户端检查配置文件变更发生了2次，所以发送了2次注册请求来修改配置信息。但由于网络的缘故 第一次可能比 第二次后请求的情况
+        // 如果注册表的脏时间晚一些 那么就使用注册表原来的，这样就不会出现上面说的那种情况
         if (existingLastDirtyTimestamp > registrationLastDirtyTimestamp) {
           logger.warn(
               "There is an existing lease and the existing lease's dirty timestamp {} is greater"
@@ -655,6 +656,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             // Since the client wants to register it, increase the number of clients sending renews
             this.expectedNumberOfClientsSendingRenews =
                 this.expectedNumberOfClientsSendingRenews + 1;
+            // 每分钟 自我保护机制阈值计算
             updateRenewsPerMinThreshold();
           }
         }
@@ -662,6 +664,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
       }
       Lease<InstanceInfo> lease = new Lease<>(registrant, leaseDuration);
       if (existingLease != null) {
+        // 设置续约服务 UP 时间戳。
         lease.setServiceUpTimestamp(existingLease.getServiceUpTimestamp());
       }
       gMap.put(registrant.getId(), lease);
@@ -931,7 +934,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         (客户端数量 * 每个客户端每分钟发送心跳的数量 * 阈值因子
         (所有客户端每分钟发送的心跳数量 * 阈值因子)
         当前Server开启自我保护机制的每分钟最小 心跳数量。
-        expectedNumberOfClientsSendingRenews 可以在配置文件中设置初始化大小的，要注意这个值调的越大，则越容易进入自我保护机制
+        renewalPercentThreshold（阈值因子） 可以在配置文件中设置初始化大小的，要注意这个值调的越大，则越容易进入自我保护机制
     */
     this.numberOfRenewsPerMinThreshold =
         (int)
@@ -940,6 +943,14 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 * serverConfig.getRenewalPercentThreshold());
   }
 
+  /**
+   * 获取覆盖的状态
+   *
+   * @param r
+   * @param existingLease
+   * @param isReplication
+   * @return
+   */
   protected InstanceInfo.InstanceStatus getOverriddenInstanceStatus(
       InstanceInfo r, Lease<InstanceInfo> existingLease, boolean isReplication) {
     InstanceStatusOverrideRule rule = getInstanceInfoOverrideRule();
